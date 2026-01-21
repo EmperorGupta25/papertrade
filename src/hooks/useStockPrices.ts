@@ -20,7 +20,9 @@ interface PriceCache {
   };
 }
 
-const CACHE_DURATION = 3000; // 3 seconds cache for faster updates
+// NOTE: Upstream market data APIs are rate-limited. A longer cache/refresh cadence
+// prevents returning partial payloads (which would otherwise fall back to mock prices).
+const CACHE_DURATION = 30000; // 30 seconds cache
 const priceCache: PriceCache = {};
 
 export function useStockPrice(symbol: string | null) {
@@ -56,7 +58,8 @@ export function useStockPrice(symbol: string | null) {
       
       const quoteData = await response.json();
       
-      if (quoteData.price > 0) {
+      // Only accept fully-formed quotes; otherwise keep the last known good value.
+      if (typeof quoteData.price === 'number' && quoteData.price > 0) {
         priceCache[symbol] = {
           quote: quoteData,
           fetchedAt: Date.now()
@@ -73,8 +76,8 @@ export function useStockPrice(symbol: string | null) {
   useEffect(() => {
     fetchPrice();
     
-    // Refresh every 5 seconds for faster updates
-    const interval = setInterval(fetchPrice, 5000);
+    // Refresh every 30 seconds (protects against upstream rate limits)
+    const interval = setInterval(fetchPrice, 30000);
     return () => clearInterval(interval);
   }, [fetchPrice]);
 
@@ -145,7 +148,7 @@ export function useBatchStockPrices(symbols: string[]) {
         
         if (data.quotes) {
           data.quotes.forEach((q: StockQuote & { error?: boolean }) => {
-            if (!q.error && q.price > 0) {
+            if (!q.error && typeof q.price === 'number' && q.price > 0) {
               priceCache[q.symbol] = {
                 quote: q,
                 fetchedAt: Date.now()
@@ -173,8 +176,8 @@ export function useBatchStockPrices(symbols: string[]) {
   useEffect(() => {
     fetchPrices();
     
-    // Refresh every 5 seconds for batch (faster updates)
-    const interval = setInterval(fetchPrices, 5000);
+    // Refresh every 30 seconds for batch (protects against upstream rate limits)
+    const interval = setInterval(fetchPrices, 30000);
     return () => clearInterval(interval);
   }, [fetchPrices]);
 
