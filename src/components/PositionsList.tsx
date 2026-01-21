@@ -1,8 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, TrendingDown, AlertTriangle, Target } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertTriangle, Target, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Position } from '@/lib/stockData';
+import { useBatchStockPrices } from '@/hooks/useStockPrices';
+import { useMemo } from 'react';
 
 interface PositionsListProps {
   positions: Position[];
@@ -11,6 +13,10 @@ interface PositionsListProps {
 }
 
 export function PositionsList({ positions, onSell, onViewChart }: PositionsListProps) {
+  // Fetch live prices for all position symbols
+  const symbols = useMemo(() => positions.map(p => p.symbol), [positions]);
+  const { quotes, loading } = useBatchStockPrices(symbols);
+
   if (positions.length === 0) {
     return (
       <Card>
@@ -31,12 +37,21 @@ export function PositionsList({ positions, onSell, onViewChart }: PositionsListP
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Your Positions</CardTitle>
+        <CardTitle className="text-lg flex items-center gap-2">
+          Your Positions
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <AnimatePresence mode="popLayout">
           {positions.map(position => {
-            const value = position.shares * position.currentPrice;
+            // Use live price if available, otherwise fall back to stored price
+            const liveQuote = quotes.get(position.symbol);
+            const currentPrice = liveQuote?.price && liveQuote.price > 0 
+              ? liveQuote.price 
+              : position.currentPrice;
+            
+            const value = position.shares * currentPrice;
             const cost = position.shares * position.avgPrice;
             const pnl = value - cost;
             const pnlPercent = (pnl / cost) * 100;
@@ -81,7 +96,7 @@ export function PositionsList({ positions, onSell, onViewChart }: PositionsListP
                   </div>
                   <div>
                     <span className="text-muted-foreground">Current</span>
-                    <p className="font-medium">${position.currentPrice.toFixed(2)}</p>
+                    <p className="font-medium">${currentPrice.toFixed(2)}</p>
                   </div>
                 </div>
 
