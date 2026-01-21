@@ -42,13 +42,6 @@ export function useStockPrice(symbol: string | null) {
     setError(null);
 
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('stock-prices', {
-        body: null,
-        headers: { 'Content-Type': 'application/json' },
-        method: 'GET',
-      });
-
-      // Use URL parameters instead
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stock-prices?action=quote&symbol=${symbol}`,
         {
