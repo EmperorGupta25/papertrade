@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Stock, popularStocks, generateCandleData, CandleData, getUpdatedPrice } from '@/lib/stockData';
+import { Stock, allStocks, generateCandleData, CandleData, getUpdatedPrice } from '@/lib/stockData';
 import { AnimatedNumber } from './AnimatedNumber';
 import { 
   LineChart, 
@@ -23,7 +23,7 @@ import { BarChart3, TrendingUp, Layers, Info, HelpCircle } from 'lucide-react';
 type ChartType = 'line' | 'area' | 'candlestick';
 
 export function ChartsPanel() {
-  const [selectedStock, setSelectedStock] = useState<Stock>(popularStocks[0]);
+  const [selectedStock, setSelectedStock] = useState<Stock>(allStocks[0]);
   const [chartType, setChartType] = useState<ChartType>('area');
   const [timeframe, setTimeframe] = useState<'1W' | '1M' | '3M'>('1M');
   const [livePrice, setLivePrice] = useState(selectedStock.price);
@@ -84,14 +84,14 @@ export function ChartsPanel() {
         </div>
 
         <Select value={selectedStock.symbol} onValueChange={(symbol) => {
-          const stock = popularStocks.find(s => s.symbol === symbol);
+          const stock = allStocks.find(s => s.symbol === symbol);
           if (stock) setSelectedStock(stock);
         }}>
           <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Select stock" />
           </SelectTrigger>
-          <SelectContent>
-            {popularStocks.map(stock => (
+          <SelectContent className="max-h-[300px]">
+            {allStocks.map(stock => (
               <SelectItem key={stock.symbol} value={stock.symbol}>
                 <span className="font-medium">{stock.symbol}</span>
                 <span className="text-muted-foreground ml-2">{stock.name}</span>

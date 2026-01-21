@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatedNumber } from './AnimatedNumber';
-import { getUpdatedPrice } from '@/lib/stockData';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { useStockPrice } from '@/hooks/useStockPrices';
+import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 
 interface LiveStockPriceProps {
   basePrice: number;
@@ -16,39 +16,23 @@ export function LiveStockPrice({
   symbol, 
   showChange = true,
   className = '',
-  updateInterval = 5000
 }: LiveStockPriceProps) {
-  const [price, setPrice] = useState(basePrice);
-  const [change, setChange] = useState(0);
-  const [isPositive, setIsPositive] = useState(true);
-
-  useEffect(() => {
-    // Random interval between 3-10 seconds
-    const getRandomInterval = () => Math.floor(Math.random() * 7000) + 3000;
-    
-    let timeoutId: NodeJS.Timeout;
-    
-    const updatePrice = () => {
-      const { price: newPrice, change: priceChange } = getUpdatedPrice(price);
-      setPrice(newPrice);
-      setChange(priceChange);
-      setIsPositive(priceChange >= 0);
-      
-      // Schedule next update with random interval
-      timeoutId = setTimeout(updatePrice, getRandomInterval());
-    };
-    
-    // Initial update after random delay
-    timeoutId = setTimeout(updatePrice, getRandomInterval());
-    
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  const changePercent = (change / (price - change)) * 100;
+  const { quote, loading, error } = useStockPrice(symbol);
+  
+  // Use live price if available, otherwise fall back to base price
+  const price = quote?.price && quote.price > 0 ? quote.price : basePrice;
+  const change = quote?.change ?? 0;
+  const changePercent = quote?.changePercent ?? 0;
+  const isPositive = change >= 0;
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <AnimatedNumber value={price} prefix="$" decimals={2} className="text-lg font-bold" />
+      <div className="flex items-center gap-1">
+        <AnimatedNumber value={price} prefix="$" decimals={2} className="text-lg font-bold" />
+        {loading && !quote && (
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+        )}
+      </div>
       {showChange && (
         <div className={`flex items-center gap-1 text-sm ${isPositive ? 'text-profit' : 'text-loss'}`}>
           {isPositive ? (

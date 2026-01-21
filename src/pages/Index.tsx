@@ -18,14 +18,14 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { TradeHistoryModal } from '@/components/TradeHistoryModal';
 import { CompetitionsPanel } from '@/components/CompetitionsPanel';
 import { usePortfolio } from '@/hooks/usePortfolio';
-import { Stock, popularStocks } from '@/lib/stockData';
+import { Stock, allStocks } from '@/lib/stockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart3, TrendingUp, Bot, LineChart, Settings, Trophy } from 'lucide-react';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('portfolio');
-  const [selectedStock, setSelectedStock] = useState<Stock | null>(popularStocks[0]);
+  const [selectedStock, setSelectedStock] = useState<Stock | null>(allStocks[0]);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showWelcomeTour, setShowWelcomeTour] = useState(false);
   const [showTradeHistoryModal, setShowTradeHistoryModal] = useState(false);
@@ -82,7 +82,7 @@ const Index = () => {
   };
 
   const handleViewChart = (symbol: string) => {
-    const stock = popularStocks.find(s => s.symbol === symbol);
+    const stock = allStocks.find(s => s.symbol === symbol);
     if (stock) {
       setSelectedStock(stock);
       setActiveTab('charts');
@@ -96,7 +96,7 @@ const Index = () => {
 
   // Wrapped handlers with confirmation
   const handleBuyWithConfirm = (symbol: string, shares: number, stopLoss?: number, takeProfit?: number) => {
-    const stock = popularStocks.find(s => s.symbol === symbol);
+    const stock = allStocks.find(s => s.symbol === symbol);
     if (!stock) return false;
     
     const total = shares * stock.price;
@@ -114,7 +114,7 @@ const Index = () => {
   };
 
   const handleSellWithConfirm = (symbol: string, shares: number) => {
-    const stock = popularStocks.find(s => s.symbol === symbol);
+    const stock = allStocks.find(s => s.symbol === symbol);
     if (!stock) return false;
     
     const total = shares * stock.price;

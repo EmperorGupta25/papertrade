@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Position, Trade, popularStocks, getUpdatedPrice } from '@/lib/stockData';
+import { Position, Trade, allStocks, getUpdatedPrice } from '@/lib/stockData';
 
 const DEFAULT_INITIAL_BALANCE = 10000;
 
@@ -95,7 +95,7 @@ export function usePortfolio() {
     stopLoss?: number,
     takeProfit?: number
   ) => {
-    const stock = popularStocks.find(s => s.symbol === symbol);
+    const stock = allStocks.find(s => s.symbol === symbol);
     if (!stock) return false;
 
     const total = stock.price * shares;

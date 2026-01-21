@@ -4,8 +4,7 @@ import { Bot, Send, Sparkles, User, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Position } from '@/lib/stockData';
-import { popularStocks } from '@/lib/stockData';
+import { Position, allStocks } from '@/lib/stockData';
 
 interface Message {
   id: string;
@@ -35,7 +34,7 @@ const getAIResponse = (question: string, context: { positions: Position[]; balan
   }
   
   if (q.includes('buy') || q.includes('invest') || q.includes('recommend')) {
-    const topGainer = popularStocks.reduce((a, b) => a.changePercent > b.changePercent ? a : b);
+    const topGainer = allStocks.reduce((a, b) => a.changePercent > b.changePercent ? a : b);
     return `Based on today's market, ${topGainer.symbol} (${topGainer.name}) is showing strong momentum with +${topGainer.changePercent.toFixed(2)}% gain. However, always consider your risk tolerance. For beginners, I'd suggest:\n\n1. **AAPL** - Stable tech giant\n2. **MSFT** - Consistent growth\n3. **NVDA** - AI/Tech leader\n\nRemember to use stop-loss orders to protect your capital!`;
   }
   
