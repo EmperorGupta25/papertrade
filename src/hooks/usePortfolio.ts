@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Position, Trade, popularStocks, getUpdatedPrice } from '@/lib/stockData';
 
-const INITIAL_BALANCE = 100000;
+const DEFAULT_INITIAL_BALANCE = 10000;
 
 export function usePortfolio() {
+  const [initialBalance, setInitialBalance] = useState(() => {
+    const saved = localStorage.getItem('mockPortfolio_initialBalance');
+    return saved ? parseFloat(saved) : DEFAULT_INITIAL_BALANCE;
+  });
+
   const [balance, setBalance] = useState(() => {
     const saved = localStorage.getItem('mockPortfolio_balance');
-    return saved ? parseFloat(saved) : INITIAL_BALANCE;
+    return saved ? parseFloat(saved) : DEFAULT_INITIAL_BALANCE;
   });
 
   const [positions, setPositions] = useState<Position[]>(() => {
@@ -23,6 +28,10 @@ export function usePortfolio() {
   useEffect(() => {
     localStorage.setItem('mockPortfolio_balance', balance.toString());
   }, [balance]);
+
+  useEffect(() => {
+    localStorage.setItem('mockPortfolio_initialBalance', initialBalance.toString());
+  }, [initialBalance]);
 
   useEffect(() => {
     localStorage.setItem('mockPortfolio_positions', JSON.stringify(positions));
@@ -164,16 +173,17 @@ export function usePortfolio() {
     return true;
   }, [positions]);
 
-  const resetPortfolio = useCallback(() => {
-    setBalance(INITIAL_BALANCE);
+  const resetPortfolio = useCallback((newBalance: number = DEFAULT_INITIAL_BALANCE) => {
+    setBalance(newBalance);
+    setInitialBalance(newBalance);
     setPositions([]);
     setTrades([]);
   }, []);
 
   const portfolioValue = positions.reduce((sum, p) => sum + (p.shares * p.currentPrice), 0);
   const totalValue = balance + portfolioValue;
-  const totalPnL = totalValue - INITIAL_BALANCE;
-  const totalPnLPercent = (totalPnL / INITIAL_BALANCE) * 100;
+  const totalPnL = totalValue - initialBalance;
+  const totalPnLPercent = (totalPnL / initialBalance) * 100;
 
   return {
     balance,
@@ -186,6 +196,6 @@ export function usePortfolio() {
     buyStock,
     sellStock,
     resetPortfolio,
-    initialBalance: INITIAL_BALANCE,
+    initialBalance,
   };
 }

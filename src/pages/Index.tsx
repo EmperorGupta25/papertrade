@@ -8,15 +8,21 @@ import { StockChart } from '@/components/StockChart';
 import { TradePanel } from '@/components/TradePanel';
 import { AICoach } from '@/components/AICoach';
 import { TradeHistory } from '@/components/TradeHistory';
+import { ChartsPanel } from '@/components/ChartsPanel';
+import { SettingsPanel } from '@/components/SettingsPanel';
+import { AuthModal } from '@/components/AuthModal';
+import { MiniChart } from '@/components/MiniChart';
+import { LiveStockPrice } from '@/components/LiveStockPrice';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { Stock, popularStocks } from '@/lib/stockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, BarChart3, TrendingUp, Bot } from 'lucide-react';
+import { BarChart3, TrendingUp, Bot, LineChart, Settings } from 'lucide-react';
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('portfolio');
   const [selectedStock, setSelectedStock] = useState<Stock | null>(popularStocks[0]);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   
   const {
     balance,
@@ -34,7 +40,7 @@ const Index = () => {
 
   const handleSelectStock = (stock: Stock) => {
     setSelectedStock(stock);
-    if (activeTab === 'dashboard') {
+    if (activeTab === 'portfolio') {
       setActiveTab('trade');
     }
   };
@@ -43,7 +49,7 @@ const Index = () => {
     const stock = popularStocks.find(s => s.symbol === symbol);
     if (stock) {
       setSelectedStock(stock);
-      setActiveTab('trade');
+      setActiveTab('charts');
     }
   };
 
@@ -54,14 +60,21 @@ const Index = () => {
 
   // Mobile navigation
   const mobileNavItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+    { id: 'portfolio', label: 'Portfolio', icon: BarChart3 },
     { id: 'trade', label: 'Trade', icon: TrendingUp },
-    { id: 'coach', label: 'AI Coach', icon: Bot },
+    { id: 'charts', label: 'Charts', icon: LineChart },
+    { id: 'coach', label: 'Coach', icon: Bot },
+    { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (
     <div className="min-h-screen bg-background">
-      <Header balance={balance} activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Header 
+        balance={balance} 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onOpenAuth={() => setShowAuthModal(true)}
+      />
 
       <main className="container mx-auto px-4 py-6">
         <motion.div
@@ -70,14 +83,10 @@ const Index = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          {activeTab === 'dashboard' && (
+          {activeTab === 'portfolio' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold">Dashboard</h1>
-                <Button variant="outline" size="sm" onClick={resetPortfolio}>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Reset Portfolio
-                </Button>
+                <h1 className="text-2xl font-bold">Portfolio Overview</h1>
               </div>
 
               <div className="grid lg:grid-cols-3 gap-6">
@@ -124,7 +133,7 @@ const Index = () => {
 
           {activeTab === 'trade' && (
             <div className="space-y-6">
-              <h1 className="text-2xl font-bold">Trade</h1>
+              <h1 className="text-2xl font-bold">Buy & Sell</h1>
 
               <div className="grid lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
@@ -137,17 +146,21 @@ const Index = () => {
                             <span className="text-muted-foreground ml-2">{selectedStock.name}</span>
                           </div>
                           <div className="text-right">
-                            <p className="text-2xl font-bold">${selectedStock.price.toFixed(2)}</p>
-                            <p className={`text-sm ${selectedStock.change >= 0 ? 'text-profit' : 'text-loss'}`}>
-                              {selectedStock.change >= 0 ? '+' : ''}{selectedStock.change.toFixed(2)} ({selectedStock.changePercent.toFixed(2)}%)
-                            </p>
+                            <LiveStockPrice 
+                              basePrice={selectedStock.price} 
+                              symbol={selectedStock.symbol} 
+                            />
                           </div>
                         </CardTitle>
                       </CardHeader>
-                      <CardContent>
-                        <StockChart symbol={selectedStock.symbol} basePrice={selectedStock.price} />
-                        
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-4 border-t">
+                      <CardContent className="space-y-4">
+                        {/* Mini live chart */}
+                        <div className="p-4 bg-secondary/30 rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-2">Live Price Chart</p>
+                          <MiniChart basePrice={selectedStock.price} symbol={selectedStock.symbol} height={80} />
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t">
                           <div>
                             <p className="text-sm text-muted-foreground">Market Cap</p>
                             <p className="font-semibold">{selectedStock.marketCap}</p>
@@ -158,11 +171,11 @@ const Index = () => {
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">52W High</p>
-                            <p className="font-semibold">${selectedStock.high52w.toFixed(2)}</p>
+                            <p className="font-semibold text-profit">${selectedStock.high52w.toFixed(2)}</p>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground">52W Low</p>
-                            <p className="font-semibold">${selectedStock.low52w.toFixed(2)}</p>
+                            <p className="font-semibold text-loss">${selectedStock.low52w.toFixed(2)}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -171,7 +184,7 @@ const Index = () => {
                     <Card>
                       <CardContent className="py-12 text-center text-muted-foreground">
                         <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p>Select a stock to view its chart</p>
+                        <p>Select a stock to start trading</p>
                       </CardContent>
                     </Card>
                   )}
@@ -189,6 +202,10 @@ const Index = () => {
                 </div>
               </div>
             </div>
+          )}
+
+          {activeTab === 'charts' && (
+            <ChartsPanel />
           )}
 
           {activeTab === 'coach' && (
@@ -218,17 +235,28 @@ const Index = () => {
               </div>
             </div>
           )}
+
+          {activeTab === 'settings' && (
+            <div className="space-y-6">
+              <h1 className="text-2xl font-bold">Settings</h1>
+              <SettingsPanel 
+                onReset={resetPortfolio}
+                currentBalance={balance}
+                initialBalance={initialBalance}
+              />
+            </div>
+          )}
         </motion.div>
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 md:hidden bg-card border-t border-border z-50">
+      <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-card border-t border-border z-50">
         <div className="flex justify-around py-2">
           {mobileNavItems.map(item => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
                 activeTab === item.id
                   ? 'text-primary'
                   : 'text-muted-foreground'
@@ -242,7 +270,9 @@ const Index = () => {
       </nav>
 
       {/* Spacer for mobile nav */}
-      <div className="h-20 md:hidden" />
+      <div className="h-20 lg:hidden" />
+
+      <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
     </div>
   );
 };
