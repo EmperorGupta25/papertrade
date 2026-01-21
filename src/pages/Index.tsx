@@ -193,9 +193,12 @@ const Index = () => {
                       <CardHeader className="pb-3">
                         <CardTitle className="text-lg flex items-center justify-between">
                           <span>{selectedStock.symbol} - {selectedStock.name}</span>
-                          <span className={selectedStock.change >= 0 ? 'text-profit' : 'text-loss'}>
-                            ${selectedStock.price.toFixed(2)}
-                          </span>
+                          <LiveStockPrice
+                            basePrice={selectedStock.price}
+                            symbol={selectedStock.symbol}
+                            showChange={false}
+                            className="justify-end"
+                          />
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
