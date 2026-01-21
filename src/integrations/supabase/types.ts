@@ -197,7 +197,9 @@ export type Database = {
           display_name: string | null
           id: string | null
           joined_at: string | null
+          positions: Json | null
           status: string | null
+          trades: Json | null
           updated_at: string | null
           user_id: string | null
         }
@@ -208,7 +210,9 @@ export type Database = {
           display_name?: string | null
           id?: string | null
           joined_at?: string | null
+          positions?: never
           status?: string | null
+          trades?: never
           updated_at?: string | null
           user_id?: string | null
         }
@@ -219,7 +223,9 @@ export type Database = {
           display_name?: string | null
           id?: string | null
           joined_at?: string | null
+          positions?: never
           status?: string | null
+          trades?: never
           updated_at?: string | null
           user_id?: string | null
         }
