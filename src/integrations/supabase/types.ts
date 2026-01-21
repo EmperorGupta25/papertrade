@@ -189,10 +189,60 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      competition_leaderboard: {
+        Row: {
+          balance: number | null
+          competition_id: string | null
+          created_at: string | null
+          display_name: string | null
+          id: string | null
+          joined_at: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          balance?: number | null
+          competition_id?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          joined_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          balance?: number | null
+          competition_id?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          id?: string | null
+          joined_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_participants_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      are_friends: {
+        Args: { _user_id_1: string; _user_id_2: string }
+        Returns: boolean
+      }
+      in_same_competition: {
+        Args: { _user_id_1: string; _user_id_2: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
