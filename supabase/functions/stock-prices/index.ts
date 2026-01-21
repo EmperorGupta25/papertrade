@@ -1,5 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
+// Simple in-memory cache to reduce upstream calls and gracefully handle upstream rate limits.
+// Note: Edge runtime instances may be recycled, so this cache is best-effort only.
+const QUOTE_CACHE_TTL_MS = 60_000;
+type CachedQuote = {
+  payload: {
+    symbol: string;
+    price: number;
+    change: number;
+    changePercent: number;
+    high: number;
+    low: number;
+    open: number;
+    previousClose: number;
+    timestamp: number;
+  };
+  fetchedAt: number;
+};
+const quoteCache = new Map<string, CachedQuote>();
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -52,6 +71,22 @@ serve(async (req) => {
         `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`
       )
 
+      // If we are rate-limited, serve cached data if available.
+      if (response.status === 429) {
+        const cached = quoteCache.get(symbol);
+        if (cached && Date.now() - cached.fetchedAt < QUOTE_CACHE_TTL_MS) {
+          return new Response(
+            JSON.stringify({ ...cached.payload, rateLimited: true, cached: true }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // No cache available — return a soft response (200) so clients don't crash.
+        return new Response(JSON.stringify({ symbol, rateLimited: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       if (!response.ok) {
         const bodyText = await response.text().catch(() => '')
         return new Response(
@@ -85,7 +120,7 @@ serve(async (req) => {
         )
       }
       
-      return new Response(JSON.stringify({
+      const payload = {
         symbol,
         price: data.c,
         change: data.d,
@@ -95,7 +130,11 @@ serve(async (req) => {
         open: data.o,
         previousClose: data.pc,
         timestamp: data.t * 1000
-      }), {
+      }
+
+      quoteCache.set(symbol, { payload, fetchedAt: Date.now() })
+
+      return new Response(JSON.stringify(payload), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -106,14 +145,23 @@ serve(async (req) => {
       const quotes = await Promise.all(
         symbolList.map(async (sym) => {
           try {
+            const trimmed = sym.trim()
             const response = await fetch(
-              `https://finnhub.io/api/v1/quote?symbol=${sym.trim()}&token=${FINNHUB_API_KEY}`
+              `https://finnhub.io/api/v1/quote?symbol=${trimmed}&token=${FINNHUB_API_KEY}`
             )
+
+            if (response.status === 429) {
+              const cached = quoteCache.get(trimmed)
+              if (cached && Date.now() - cached.fetchedAt < QUOTE_CACHE_TTL_MS) {
+                return { ...cached.payload, rateLimited: true, cached: true }
+              }
+              return { symbol: trimmed, rateLimited: true, error: true }
+            }
 
             if (!response.ok) {
               const bodyText = await response.text().catch(() => '')
               return {
-                symbol: sym.trim(),
+                symbol: trimmed,
                 error: true,
                 status: response.status,
                 body: bodyText,
@@ -124,14 +172,14 @@ serve(async (req) => {
 
             if (typeof data?.c !== 'number' || typeof data?.t !== 'number') {
               return {
-                symbol: sym.trim(),
+                symbol: trimmed,
                 error: true,
                 upstream: data,
               }
             }
 
-            return {
-              symbol: sym.trim(),
+            const payload = {
+              symbol: trimmed,
               price: data.c,
               change: data.d,
               changePercent: data.dp,
@@ -141,6 +189,9 @@ serve(async (req) => {
               previousClose: data.pc,
               timestamp: data.t * 1000
             }
+
+            quoteCache.set(trimmed, { payload, fetchedAt: Date.now() })
+            return payload
           } catch {
             return { symbol: sym.trim(), error: true }
           }
