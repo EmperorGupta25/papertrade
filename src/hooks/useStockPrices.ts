@@ -20,7 +20,7 @@ interface PriceCache {
   };
 }
 
-const CACHE_DURATION = 5000; // 5 seconds cache
+const CACHE_DURATION = 3000; // 3 seconds cache for faster updates
 const priceCache: PriceCache = {};
 
 export function useStockPrice(symbol: string | null) {
@@ -73,8 +73,8 @@ export function useStockPrice(symbol: string | null) {
   useEffect(() => {
     fetchPrice();
     
-    // Refresh every 10 seconds
-    const interval = setInterval(fetchPrice, 10000);
+    // Refresh every 5 seconds for faster updates
+    const interval = setInterval(fetchPrice, 5000);
     return () => clearInterval(interval);
   }, [fetchPrice]);
 
@@ -173,8 +173,8 @@ export function useBatchStockPrices(symbols: string[]) {
   useEffect(() => {
     fetchPrices();
     
-    // Refresh every 15 seconds for batch
-    const interval = setInterval(fetchPrices, 15000);
+    // Refresh every 5 seconds for batch (faster updates)
+    const interval = setInterval(fetchPrices, 5000);
     return () => clearInterval(interval);
   }, [fetchPrices]);
 
