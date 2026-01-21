@@ -14,6 +14,122 @@ export type Database = {
   }
   public: {
     Tables: {
+      competition_participants: {
+        Row: {
+          balance: number
+          competition_id: string
+          created_at: string
+          display_name: string | null
+          id: string
+          joined_at: string | null
+          positions: Json
+          status: string
+          trades: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          competition_id: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          joined_at?: string | null
+          positions?: Json
+          status?: string
+          trades?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          competition_id?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          joined_at?: string | null
+          positions?: Json
+          status?: string
+          trades?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "competition_participants_competition_id_fkey"
+            columns: ["competition_id"]
+            isOneToOne: false
+            referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      competitions: {
+        Row: {
+          created_at: string
+          creator_id: string
+          end_date: string
+          id: string
+          max_participants: number
+          name: string
+          start_date: string
+          starting_balance: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          end_date: string
+          id?: string
+          max_participants?: number
+          name: string
+          start_date: string
+          starting_balance?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          end_date?: string
+          id?: string
+          max_participants?: number
+          name?: string
+          start_date?: string
+          starting_balance?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      friends: {
+        Row: {
+          created_at: string
+          friend_id: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          friend_id: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          friend_id?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
