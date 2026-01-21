@@ -54,10 +54,24 @@ export function useStockPrice(symbol: string | null) {
         }
       );
 
-      if (!response.ok) throw new Error('Failed to fetch price');
-      
+      // Treat rate limits / upstream issues as non-fatal: keep the last known good quote.
+      if (!response.ok) {
+        if (response.status === 429) {
+          setError('Rate limited — showing last known price')
+          return
+        }
+        setError('Failed to fetch price')
+        return
+      }
+
       const quoteData = await response.json();
-      
+
+      // If the backend had to soft-fail due to rate limiting, don't overwrite.
+      if (quoteData?.rateLimited) {
+        setError('Rate limited — showing last known price')
+        return
+      }
+
       // Only accept fully-formed quotes; otherwise keep the last known good value.
       if (typeof quoteData.price === 'number' && quoteData.price > 0) {
         priceCache[symbol] = {
