@@ -51,7 +51,39 @@ serve(async (req) => {
       const response = await fetch(
         `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`
       )
+
+      if (!response.ok) {
+        const bodyText = await response.text().catch(() => '')
+        return new Response(
+          JSON.stringify({
+            error: 'Upstream quote request failed',
+            status: response.status,
+            body: bodyText,
+          }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        )
+      }
+
       const data: QuoteResponse = await response.json()
+
+      // Finnhub sometimes returns an error object (or empty payload) with 200.
+      // Validate the expected numeric fields before mapping.
+      if (typeof data?.c !== 'number' || typeof data?.t !== 'number') {
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid quote payload from upstream',
+            symbol,
+            upstream: data,
+          }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        )
+      }
       
       return new Response(JSON.stringify({
         symbol,
@@ -77,7 +109,27 @@ serve(async (req) => {
             const response = await fetch(
               `https://finnhub.io/api/v1/quote?symbol=${sym.trim()}&token=${FINNHUB_API_KEY}`
             )
+
+            if (!response.ok) {
+              const bodyText = await response.text().catch(() => '')
+              return {
+                symbol: sym.trim(),
+                error: true,
+                status: response.status,
+                body: bodyText,
+              }
+            }
+
             const data: QuoteResponse = await response.json()
+
+            if (typeof data?.c !== 'number' || typeof data?.t !== 'number') {
+              return {
+                symbol: sym.trim(),
+                error: true,
+                upstream: data,
+              }
+            }
+
             return {
               symbol: sym.trim(),
               price: data.c,
@@ -105,12 +157,42 @@ serve(async (req) => {
       const response = await fetch(
         `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_API_KEY}`
       )
+
+      if (!response.ok) {
+        const bodyText = await response.text().catch(() => '')
+        return new Response(
+          JSON.stringify({
+            error: 'Upstream candles request failed',
+            status: response.status,
+            body: bodyText,
+          }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        )
+      }
+
       const data: CandleResponse = await response.json()
       
       if (data.s === 'no_data') {
         return new Response(JSON.stringify({ candles: [], status: 'no_data' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
+      }
+
+      if (data.s !== 'ok' || !Array.isArray(data.t) || !Array.isArray(data.c)) {
+        return new Response(
+          JSON.stringify({
+            error: 'Invalid candles payload from upstream',
+            symbol,
+            upstream: data,
+          }),
+          {
+            status: 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        )
       }
 
       const candles = data.t?.map((timestamp, i) => ({
