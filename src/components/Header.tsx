@@ -49,10 +49,11 @@ export function Header({ balance, activeTab, setActiveTab, onOpenAuth }: HeaderP
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <img 
+            <img 
                 src={logo} 
                 alt="PaperTrade" 
-                className={`h-9 w-9 ${theme === 'light' ? 'invert' : ''}`} 
+                className="h-9 w-9"
+                style={theme === 'light' ? { filter: 'brightness(0)' } : undefined}
               />
             </motion.div>
             <span className="text-lg font-bold hidden sm:inline">PaperTrade</span>
