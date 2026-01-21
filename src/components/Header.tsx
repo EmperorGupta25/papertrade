@@ -1,8 +1,8 @@
-import { ThemeToggle } from './ThemeToggle';
-import { TrendingUp, Wallet, Bot, BarChart3, LineChart, Settings, LogIn, User } from 'lucide-react';
+import { TrendingUp, Wallet, Bot, BarChart3, LineChart, Settings, LogIn, User, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { MarketStatusBanner } from './MarketStatusBanner';
 import logo from '@/assets/logo.png';
 
 interface HeaderProps {
@@ -19,6 +19,7 @@ export function Header({ balance, activeTab, setActiveTab, onOpenAuth }: HeaderP
     { id: 'portfolio', label: 'Portfolio', icon: BarChart3 },
     { id: 'trade', label: 'Trade', icon: TrendingUp },
     { id: 'charts', label: 'Charts', icon: LineChart },
+    { id: 'competitions', label: 'Compete', icon: Trophy },
     { id: 'coach', label: 'AI Coach', icon: Bot },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -66,12 +67,16 @@ export function Header({ balance, activeTab, setActiveTab, onOpenAuth }: HeaderP
           </nav>
 
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-secondary rounded-lg">
+            <MarketStatusBanner />
+            <button 
+              onClick={() => window.dispatchEvent(new CustomEvent('openTradeHistory'))}
+              className="flex items-center gap-2 px-4 py-2.5 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors cursor-pointer"
+            >
               <Wallet className="h-5 w-5 text-primary" />
               <span className="font-semibold text-base">
                 ${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </span>
-            </div>
+            </button>
             
             {isAuthenticated ? (
               <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg">
