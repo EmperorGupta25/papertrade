@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Stock } from '@/lib/stockData';
 import { toast } from 'sonner';
+import { useStockPrice } from '@/hooks/useStockPrices';
 
 interface TradePanelProps {
   stock: Stock | null;
@@ -25,6 +26,10 @@ export function TradePanel({ stock, balance, onBuy, onSell, ownedShares }: Trade
   const [enableTakeProfit, setEnableTakeProfit] = useState(false);
   const [takeProfit, setTakeProfit] = useState('10');
 
+  // Fetch live price from Finnhub API
+  const { quote } = useStockPrice(stock?.symbol ?? null);
+  const livePrice = quote?.price && quote.price > 0 ? quote.price : stock?.price ?? 0;
+
   if (!stock) {
     return (
       <Card>
@@ -37,7 +42,7 @@ export function TradePanel({ stock, balance, onBuy, onSell, ownedShares }: Trade
   }
 
   const shareCount = parseInt(shares) || 0;
-  const total = shareCount * stock.price;
+  const total = shareCount * livePrice;
   const canAfford = total <= balance;
   const canSell = ownedShares >= shareCount;
 
@@ -84,7 +89,7 @@ export function TradePanel({ stock, balance, onBuy, onSell, ownedShares }: Trade
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center justify-between">
           <span>Trade {stock.symbol}</span>
-          <span className="text-2xl font-bold">${stock.price.toFixed(2)}</span>
+          <span className="text-2xl font-bold">${livePrice.toFixed(2)}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

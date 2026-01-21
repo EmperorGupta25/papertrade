@@ -1,11 +1,12 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Stock, allStocks, generateCandleData, CandleData, getUpdatedPrice } from '@/lib/stockData';
+import { Stock, allStocks, generateCandleData, CandleData } from '@/lib/stockData';
 import { AnimatedNumber } from './AnimatedNumber';
+import { useStockPrice } from '@/hooks/useStockPrices';
 import { 
   LineChart, 
   Line, 
@@ -18,7 +19,7 @@ import {
   CartesianGrid,
   ReferenceLine
 } from 'recharts';
-import { BarChart3, TrendingUp, Layers, Info, HelpCircle } from 'lucide-react';
+import { BarChart3, TrendingUp, Layers, HelpCircle } from 'lucide-react';
 
 type ChartType = 'line' | 'area' | 'candlestick';
 
@@ -26,39 +27,17 @@ export function ChartsPanel() {
   const [selectedStock, setSelectedStock] = useState<Stock>(allStocks[0]);
   const [chartType, setChartType] = useState<ChartType>('area');
   const [timeframe, setTimeframe] = useState<'1W' | '1M' | '3M'>('1M');
-  const [livePrice, setLivePrice] = useState(selectedStock.price);
-  const [priceChange, setPriceChange] = useState(0);
+
+  // Fetch live price from Finnhub API
+  const { quote } = useStockPrice(selectedStock.symbol);
+  const livePrice = quote?.price && quote.price > 0 ? quote.price : selectedStock.price;
+  const priceChange = quote?.change ?? 0;
 
   // Generate chart data
   const data = useMemo(() => {
     const days = timeframe === '1W' ? 7 : timeframe === '1M' ? 30 : 90;
-    return generateCandleData(selectedStock.price, days);
-  }, [selectedStock.price, timeframe]);
-
-  // Live price updates with random 3-10 second intervals
-  useEffect(() => {
-    const getRandomInterval = () => Math.floor(Math.random() * 7000) + 3000;
-    
-    let timeoutId: NodeJS.Timeout;
-    
-    const updatePrice = () => {
-      const { price: newPrice, change } = getUpdatedPrice(livePrice);
-      setLivePrice(newPrice);
-      setPriceChange(change);
-      
-      timeoutId = setTimeout(updatePrice, getRandomInterval());
-    };
-    
-    timeoutId = setTimeout(updatePrice, getRandomInterval());
-    
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  // Reset live price when stock changes
-  useEffect(() => {
-    setLivePrice(selectedStock.price);
-    setPriceChange(0);
-  }, [selectedStock]);
+    return generateCandleData(livePrice, days);
+  }, [livePrice, timeframe]);
 
   const chartTypes: { type: ChartType; icon: React.ReactNode; label: string; description: string }[] = [
     { type: 'line', icon: <TrendingUp className="h-4 w-4" />, label: 'Line', description: 'Simple line showing closing prices' },
