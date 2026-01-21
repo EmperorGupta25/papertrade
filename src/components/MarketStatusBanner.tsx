@@ -41,22 +41,23 @@ export function MarketStatusBanner() {
     }
   };
 
+  // Only show detailed info when market is open or in extended hours
+  const showDetails = status.status !== 'closed';
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${getStatusColor()}`}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-medium border ${getStatusColor()}`}
+      title={status.message}
     >
       {getIcon()}
-      <span>{status.message}</span>
-      {status.nextOpen && !status.isOpen && (
-        <span className="opacity-70">
-          • Opens in {formatTimeUntil(status.nextOpen)}
-        </span>
-      )}
-      {status.nextClose && status.isOpen && (
-        <span className="opacity-70">
-          • Closes in {formatTimeUntil(status.nextClose)}
+      <span className="hidden sm:inline">
+        {status.status === 'open' ? 'Open' : status.status === 'closed' ? 'Closed' : status.message}
+      </span>
+      {showDetails && status.nextClose && status.isOpen && (
+        <span className="opacity-70 hidden md:inline">
+          • {formatTimeUntil(status.nextClose)}
         </span>
       )}
     </motion.div>
