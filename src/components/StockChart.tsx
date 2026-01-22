@@ -24,11 +24,18 @@ interface StockChartProps {
 
 export function StockChart({ symbol, basePrice }: StockChartProps) {
   const [chartType, setChartType] = useState<ChartType>('area');
-  const [timeframe, setTimeframe] = useState<'1W' | '1M' | '3M'>('1M');
+  const [timeframe, setTimeframe] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | '10Y'>('1M');
 
   const data = useMemo(() => {
-    const days = timeframe === '1W' ? 7 : timeframe === '1M' ? 30 : 90;
-    return generateCandleData(basePrice, days);
+    const daysMap: Record<string, number> = {
+      '1D': 1,
+      '1W': 7,
+      '1M': 30,
+      '3M': 90,
+      '1Y': 365,
+      '10Y': 3650,
+    };
+    return generateCandleData(basePrice, daysMap[timeframe] || 30);
   }, [basePrice, timeframe]);
 
   const chartTypes: { type: ChartType; icon: React.ReactNode; label: string }[] = [
@@ -37,7 +44,7 @@ export function StockChart({ symbol, basePrice }: StockChartProps) {
     { type: 'candlestick', icon: <BarChart3 className="h-4 w-4" />, label: 'Candles' },
   ];
 
-  const timeframes = ['1W', '1M', '3M'] as const;
+  const timeframes = ['1D', '1W', '1M', '3M', '1Y', '10Y'] as const;
 
   const isPositive = data.length >= 2 && data[data.length - 1].close >= data[0].open;
 
