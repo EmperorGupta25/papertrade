@@ -360,12 +360,17 @@ export function searchStocks(query: string): Stock[] {
   );
 }
 
-// Generate realistic candlestick data with intraday support
-export function generateCandleData(basePrice: number, days: number = 90, intraday: boolean = false): CandleData[] {
+// Generate realistic candlestick data with intraday/hourly support
+// resolution: 'minute' for 1D, 'hourly' for 1W, 'daily' for others
+export function generateCandleData(
+  basePrice: number, 
+  days: number = 90, 
+  resolution: 'minute' | 'hourly' | 'daily' = 'daily'
+): CandleData[] {
   const data: CandleData[] = [];
   let currentPrice = basePrice * 0.85;
 
-  if (intraday) {
+  if (resolution === 'minute') {
     // Generate minute-by-minute data for today
     const now = new Date();
     const marketOpen = new Date(now);
@@ -376,7 +381,7 @@ export function generateCandleData(basePrice: number, days: number = 90, intrada
       390 // Max 6.5 hours of trading
     );
 
-    for (let i = 0; i <= minutesOpen; i++) {
+    for (let i = 0; i <= Math.max(minutesOpen, 60); i++) {
       const time = new Date(marketOpen);
       time.setMinutes(time.getMinutes() + i);
 
@@ -399,6 +404,48 @@ export function generateCandleData(basePrice: number, days: number = 90, intrada
       });
 
       currentPrice = close;
+    }
+  } else if (resolution === 'hourly') {
+    // Generate hourly data for the week (5 trading days × ~7 hours)
+    const tradingHoursPerDay = 7; // 9:30 AM - 4:00 PM
+    const tradingDays = 5;
+    const now = new Date();
+    
+    for (let day = tradingDays - 1; day >= 0; day--) {
+      const currentDay = new Date(now);
+      currentDay.setDate(currentDay.getDate() - day);
+      
+      // Skip weekends
+      const dayOfWeek = currentDay.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+      
+      for (let hour = 0; hour < tradingHoursPerDay; hour++) {
+        const time = new Date(currentDay);
+        time.setHours(9 + hour, hour === 0 ? 30 : 0, 0, 0);
+
+        const volatility = 0.003 + Math.random() * 0.005;
+        const trend = Math.random() > 0.47 ? 1 : -1;
+        const change = currentPrice * volatility * trend;
+
+        const open = currentPrice;
+        const close = currentPrice + change;
+        const high = Math.max(open, close) + Math.abs(change) * Math.random() * 0.4;
+        const low = Math.min(open, close) - Math.abs(change) * Math.random() * 0.4;
+
+        const dayLabel = time.toLocaleDateString('en-US', { weekday: 'short' });
+        const hourLabel = time.toLocaleTimeString('en-US', { hour: 'numeric' });
+
+        data.push({
+          time: `${dayLabel} ${hourLabel}`,
+          open: Number(open.toFixed(2)),
+          high: Number(high.toFixed(2)),
+          low: Number(low.toFixed(2)),
+          close: Number(close.toFixed(2)),
+          volume: Math.floor(Math.random() * 2000000) + 500000,
+        });
+
+        currentPrice = close;
+      }
     }
   } else {
     // Generate daily data

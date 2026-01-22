@@ -43,8 +43,8 @@ export function ChartsPanel() {
       '1Y': 365,
       '10Y': 3650,
     };
-    const isIntraday = timeframe === '1D';
-    return generateCandleData(livePrice, daysMap[timeframe] || 30, isIntraday);
+    const resolution = timeframe === '1D' ? 'minute' : timeframe === '1W' ? 'hourly' : 'daily';
+    return generateCandleData(livePrice, daysMap[timeframe] || 30, resolution);
   }, [livePrice, timeframe]);
 
   const chartTypes: { type: ChartType; icon: React.ReactNode; label: string; description: string }[] = [
