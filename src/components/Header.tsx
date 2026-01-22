@@ -45,15 +45,15 @@ export function Header({ balance, activeTab, setActiveTab, onOpenAuth }: HeaderP
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
             <motion.div 
-              className="rounded-lg overflow-hidden"
+              className="overflow-hidden"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-            <img 
+              <img 
                 src={logo} 
                 alt="PaperTrade" 
                 className="h-9 w-9"
-                style={theme === 'light' ? { filter: 'brightness(0)' } : undefined}
+                style={theme === 'light' ? { filter: 'brightness(0)', background: 'transparent' } : undefined}
               />
             </motion.div>
             <span className="text-lg font-bold hidden sm:inline">PaperTrade</span>
