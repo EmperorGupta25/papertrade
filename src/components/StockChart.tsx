@@ -35,8 +35,8 @@ export function StockChart({ symbol, basePrice }: StockChartProps) {
       '1Y': 365,
       '10Y': 3650,
     };
-    const isIntraday = timeframe === '1D';
-    return generateCandleData(basePrice, daysMap[timeframe] || 30, isIntraday);
+    const resolution = timeframe === '1D' ? 'minute' : timeframe === '1W' ? 'hourly' : 'daily';
+    return generateCandleData(basePrice, daysMap[timeframe] || 30, resolution);
   }, [basePrice, timeframe]);
 
   const chartTypes: { type: ChartType; icon: React.ReactNode; label: string }[] = [
