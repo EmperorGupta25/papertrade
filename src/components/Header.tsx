@@ -41,9 +41,9 @@ export function Header({ balance, activeTab, setActiveTab, onOpenAuth }: HeaderP
 
   return (
     <header className="sticky top-0 z-50 glass border-b border-border">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-3">
+      <div className="container mx-auto px-2 sm:px-4">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <motion.div 
               className="overflow-hidden"
               whileHover={{ scale: 1.05 }}
@@ -52,11 +52,11 @@ export function Header({ balance, activeTab, setActiveTab, onOpenAuth }: HeaderP
               <img 
                 src={logo} 
                 alt="PaperTrade" 
-                className="h-9 w-9"
+                className="h-8 w-8 sm:h-9 sm:w-9"
                 style={theme === 'light' ? { filter: 'brightness(0)', background: 'transparent' } : undefined}
               />
             </motion.div>
-            <span className="text-lg font-bold hidden sm:inline">PaperTrade</span>
+            <span className="text-base sm:text-lg font-bold hidden sm:inline">PaperTrade</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-1">
@@ -124,15 +124,21 @@ export function Header({ balance, activeTab, setActiveTab, onOpenAuth }: HeaderP
             </DropdownMenu>
           </nav>
 
-          <div className="flex items-center gap-2">
-            <MarketStatusBanner />
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="hidden sm:block">
+              <MarketStatusBanner />
+            </div>
             <button 
               onClick={() => window.dispatchEvent(new CustomEvent('openTradeHistory'))}
-              className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors cursor-pointer"
             >
-              <Wallet className="h-4 w-4 text-primary" />
+              <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
               <span className="font-semibold text-xs sm:text-sm">
-                ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 0 })}
+                ${balance >= 1000000 
+                  ? `${(balance / 1000000).toFixed(1)}M` 
+                  : balance >= 1000 
+                    ? `${(balance / 1000).toFixed(1)}K`
+                    : balance.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </span>
             </button>
             
