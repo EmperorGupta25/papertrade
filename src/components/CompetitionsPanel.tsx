@@ -115,7 +115,12 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
   }, [user]);
 
   const loadPendingFriendRequests = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id) {
+      console.log('[FriendRequests] No user id, skipping load');
+      return;
+    }
+
+    console.log('[FriendRequests] Loading pending requests for user:', user.id);
 
     try {
       // Get pending requests where current user is the recipient (friend_id)
@@ -125,10 +130,18 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
         .eq('friend_id', user.id)
         .eq('status', 'pending');
 
+      console.log('[FriendRequests] Query result:', { data, error });
+
       if (error) throw error;
 
+      if (!data || data.length === 0) {
+        console.log('[FriendRequests] No pending requests found');
+        setPendingFriendRequests([]);
+        return;
+      }
+
       // Fetch display names for the requesters
-      const requestsWithNames = await Promise.all((data || []).map(async (f) => {
+      const requestsWithNames = await Promise.all(data.map(async (f) => {
         const { data: profile } = await supabase
           .from('profiles')
           .select('display_name')
@@ -142,9 +155,10 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
         };
       }));
 
+      console.log('[FriendRequests] Requests with names:', requestsWithNames);
       setPendingFriendRequests(requestsWithNames as Friend[]);
     } catch (error) {
-      console.error('Error loading pending friend requests:', error);
+      console.error('[FriendRequests] Error loading pending friend requests:', error);
     }
   }, [user]);
 
