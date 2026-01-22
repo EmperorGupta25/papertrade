@@ -66,6 +66,7 @@ interface CompetitionsPanelProps {
 export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
   const { user, isAuthenticated } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [pendingFriendRequests, setPendingFriendRequests] = useState<Friend[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [pendingInvites, setPendingInvites] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(false);
@@ -82,6 +83,7 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
   useEffect(() => {
     if (isAuthenticated) {
       loadFriends();
+      loadPendingFriendRequests();
       loadCompetitions();
     }
   }, [isAuthenticated]);
@@ -117,6 +119,70 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
       setFriends(friendsWithNames as Friend[]);
     } catch (error) {
       console.error('Error loading friends:', error);
+    }
+  };
+
+  const loadPendingFriendRequests = async () => {
+    if (!user) return;
+    
+    try {
+      // Get pending requests where current user is the recipient (friend_id)
+      const { data, error } = await supabase
+        .from('friends')
+        .select('*')
+        .eq('friend_id', user.id)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      
+      // Fetch display names for the requesters
+      const requestsWithNames = await Promise.all((data || []).map(async (f) => {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', f.user_id)
+          .single();
+        
+        return { 
+          ...f, 
+          display_name: profile?.display_name || 'Unknown',
+          status: f.status as 'pending' | 'accepted' | 'rejected'
+        };
+      }));
+
+      setPendingFriendRequests(requestsWithNames as Friend[]);
+    } catch (error) {
+      console.error('Error loading pending friend requests:', error);
+    }
+  };
+
+  const respondToFriendRequest = async (friendshipId: string, accept: boolean) => {
+    if (!user) return;
+
+    try {
+      if (accept) {
+        const { error } = await supabase
+          .from('friends')
+          .update({ status: 'accepted' })
+          .eq('id', friendshipId);
+
+        if (error) throw error;
+        toast.success('Friend request accepted!');
+      } else {
+        const { error } = await supabase
+          .from('friends')
+          .delete()
+          .eq('id', friendshipId);
+
+        if (error) throw error;
+        toast.info('Friend request declined');
+      }
+
+      loadFriends();
+      loadPendingFriendRequests();
+    } catch (error) {
+      console.error('Error responding to friend request:', error);
+      toast.error('Failed to respond to friend request');
     }
   };
 
@@ -526,7 +592,14 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="friends">Friends</TabsTrigger>
+          <TabsTrigger value="friends">
+            Friends
+            {pendingFriendRequests.length > 0 && (
+              <Badge variant="destructive" className="ml-2 h-5 w-5 p-0 flex items-center justify-center">
+                {pendingFriendRequests.length}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-4 mt-4">
@@ -593,7 +666,45 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
         </TabsContent>
 
         <TabsContent value="friends" className="space-y-4 mt-4">
-          {friends.length === 0 ? (
+          {/* Pending Friend Requests */}
+          {pendingFriendRequests.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
+              {pendingFriendRequests.map((request) => (
+                <Card key={request.id}>
+                  <CardContent className="py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-warning/20 flex items-center justify-center">
+                        <UserPlus className="h-5 w-5 text-warning" />
+                      </div>
+                      <div>
+                        <span className="font-medium">{request.display_name}</span>
+                        <p className="text-xs text-muted-foreground">wants to be your friend</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => respondToFriendRequest(request.id, false)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        size="sm"
+                        onClick={() => respondToFriendRequest(request.id, true)}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Accepted Friends */}
+          {friends.length === 0 && pendingFriendRequests.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -601,21 +712,26 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
                 <p className="text-sm">Add friends to start competing!</p>
               </CardContent>
             </Card>
-          ) : (
-            <div className="grid gap-2">
-              {friends.map((friend) => (
-                <Card key={friend.id}>
-                  <CardContent className="py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Users className="h-5 w-5 text-primary" />
+          ) : friends.length > 0 && (
+            <div className="space-y-2">
+              {pendingFriendRequests.length > 0 && (
+                <p className="text-sm font-medium text-muted-foreground">Your Friends</p>
+              )}
+              <div className="grid gap-2">
+                {friends.map((friend) => (
+                  <Card key={friend.id}>
+                    <CardContent className="py-3 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-primary" />
+                        </div>
+                        <span className="font-medium">{friend.display_name}</span>
                       </div>
-                      <span className="font-medium">{friend.display_name}</span>
-                    </div>
-                    <Badge variant="secondary">Friend</Badge>
-                  </CardContent>
-                </Card>
-              ))}
+                      <Badge variant="secondary">Friend</Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
         </TabsContent>
