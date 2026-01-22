@@ -360,12 +360,12 @@ export function searchStocks(query: string): Stock[] {
   );
 }
 
-// Generate realistic candlestick data with intraday/hourly support
-// resolution: 'minute' for 1D, 'hourly' for 1W, 'daily' for others
+// Generate realistic candlestick data with intraday/hourly/4hour support
+// resolution: 'minute' for 1D, 'hourly' for 1W, '4hour' for 1M, 'daily' for others
 export function generateCandleData(
   basePrice: number, 
   days: number = 90, 
-  resolution: 'minute' | 'hourly' | 'daily' = 'daily'
+  resolution: 'minute' | 'hourly' | '4hour' | 'daily' = 'daily'
 ): CandleData[] {
   const data: CandleData[] = [];
   let currentPrice = basePrice * 0.85;
@@ -406,8 +406,8 @@ export function generateCandleData(
       currentPrice = close;
     }
   } else if (resolution === 'hourly') {
-    // Generate hourly data for the week (5 trading days × ~7 hours)
-    const tradingHoursPerDay = 7; // 9:30 AM - 4:00 PM
+    // Generate hourly data for the week (5 trading days × 9 hours: 9 AM - 5 PM)
+    const tradingHours = [9, 10, 11, 12, 13, 14, 15, 16, 17]; // 9 AM to 5 PM
     const tradingDays = 5;
     const now = new Date();
     
@@ -419,9 +419,9 @@ export function generateCandleData(
       const dayOfWeek = currentDay.getDay();
       if (dayOfWeek === 0 || dayOfWeek === 6) continue;
       
-      for (let hour = 0; hour < tradingHoursPerDay; hour++) {
+      for (const hour of tradingHours) {
         const time = new Date(currentDay);
-        time.setHours(9 + hour, hour === 0 ? 30 : 0, 0, 0);
+        time.setHours(hour, 0, 0, 0);
 
         const volatility = 0.003 + Math.random() * 0.005;
         const trend = Math.random() > 0.47 ? 1 : -1;
@@ -442,6 +442,47 @@ export function generateCandleData(
           low: Number(low.toFixed(2)),
           close: Number(close.toFixed(2)),
           volume: Math.floor(Math.random() * 2000000) + 500000,
+        });
+
+        currentPrice = close;
+      }
+    }
+  } else if (resolution === '4hour') {
+    // Generate 4-hour resolution data for the month (~30 days × 2 candles per day)
+    const fourHourSlots = [10, 14]; // 10 AM and 2 PM represent 4-hour blocks
+    const now = new Date();
+    
+    for (let day = days; day >= 0; day--) {
+      const currentDay = new Date(now);
+      currentDay.setDate(currentDay.getDate() - day);
+      
+      // Skip weekends
+      const dayOfWeek = currentDay.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+      
+      for (const hour of fourHourSlots) {
+        const time = new Date(currentDay);
+        time.setHours(hour, 0, 0, 0);
+
+        const volatility = 0.008 + Math.random() * 0.012;
+        const trend = Math.random() > 0.46 ? 1 : -1;
+        const change = currentPrice * volatility * trend;
+
+        const open = currentPrice;
+        const close = currentPrice + change;
+        const high = Math.max(open, close) + Math.abs(change) * Math.random() * 0.4;
+        const low = Math.min(open, close) - Math.abs(change) * Math.random() * 0.4;
+
+        const dateLabel = time.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const hourLabel = time.toLocaleTimeString('en-US', { hour: 'numeric' });
+
+        data.push({
+          time: `${dateLabel} ${hourLabel}`,
+          open: Number(open.toFixed(2)),
+          high: Number(high.toFixed(2)),
+          low: Number(low.toFixed(2)),
+          close: Number(close.toFixed(2)),
+          volume: Math.floor(Math.random() * 5000000) + 1000000,
         });
 
         currentPrice = close;
