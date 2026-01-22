@@ -43,7 +43,12 @@ export function ChartsPanel() {
       '1Y': 365,
       '10Y': 3650,
     };
-    const resolution = timeframe === '1D' ? 'minute' : timeframe === '1W' ? 'hourly' : 'daily';
+    const resolutionMap: Record<string, 'minute' | 'hourly' | '4hour' | 'daily'> = {
+      '1D': 'minute',
+      '1W': 'hourly',
+      '1M': '4hour',
+    };
+    const resolution = resolutionMap[timeframe] || 'daily';
     return generateCandleData(livePrice, daysMap[timeframe] || 30, resolution);
   }, [livePrice, timeframe]);
 
