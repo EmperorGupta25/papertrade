@@ -93,12 +93,15 @@ export function usePortfolio() {
     symbol: string,
     shares: number,
     stopLoss?: number,
-    takeProfit?: number
+    takeProfit?: number,
+    livePrice?: number
   ) => {
     const stock = allStocks.find(s => s.symbol === symbol);
     if (!stock) return false;
 
-    const total = stock.price * shares;
+    // Use live price if provided, otherwise fall back to stock.price
+    const buyPrice = livePrice && livePrice > 0 ? livePrice : stock.price;
+    const total = buyPrice * shares;
     if (total > balance) return false;
 
     setBalance(prev => prev - total);
@@ -107,7 +110,7 @@ export function usePortfolio() {
       const existing = prev.find(p => p.symbol === symbol);
       if (existing) {
         const totalShares = existing.shares + shares;
-        const avgPrice = ((existing.shares * existing.avgPrice) + (shares * stock.price)) / totalShares;
+        const avgPrice = ((existing.shares * existing.avgPrice) + (shares * buyPrice)) / totalShares;
         return prev.map(p => p.symbol === symbol ? {
           ...p,
           shares: totalShares,
@@ -121,8 +124,8 @@ export function usePortfolio() {
         symbol,
         name: stock.name,
         shares,
-        avgPrice: stock.price,
-        currentPrice: stock.price,
+        avgPrice: buyPrice,
+        currentPrice: buyPrice,
         stopLoss,
         takeProfit,
       }];
@@ -133,7 +136,7 @@ export function usePortfolio() {
       symbol,
       type: 'buy',
       shares,
-      price: stock.price,
+      price: buyPrice,
       total,
       timestamp: new Date(),
       status: 'completed',

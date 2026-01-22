@@ -95,18 +95,19 @@ const Index = () => {
   };
 
   // Wrapped handlers with confirmation
-  const handleBuyWithConfirm = (symbol: string, shares: number, stopLoss?: number, takeProfit?: number) => {
+  const handleBuyWithConfirm = (symbol: string, shares: number, stopLoss?: number, takeProfit?: number, livePrice?: number) => {
     const stock = allStocks.find(s => s.symbol === symbol);
     if (!stock) return false;
     
-    const total = shares * stock.price;
+    const price = livePrice && livePrice > 0 ? livePrice : stock.price;
+    const total = shares * price;
     
     setConfirmDialog({
       open: true,
       title: 'Confirm Purchase',
-      description: `Buy ${shares} share${shares > 1 ? 's' : ''} of ${symbol} for $${total.toFixed(2)}?`,
+      description: `Buy ${shares} share${shares > 1 ? 's' : ''} of ${symbol} for $${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}?`,
       onConfirm: () => {
-        buyStock(symbol, shares, stopLoss, takeProfit);
+        buyStock(symbol, shares, stopLoss, takeProfit, livePrice);
         setConfirmDialog(prev => ({ ...prev, open: false }));
       },
     });
