@@ -40,9 +40,9 @@ export function Header({ balance, activeTab, setActiveTab, onOpenAuth }: HeaderP
   const isInMoreMenu = moreTabs.some(t => t.id === activeTab);
 
   return (
-    <header className="sticky top-0 z-50 glass border-b border-border">
-      <div className="container mx-auto px-2 sm:px-4">
-        <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
+    <header className="sticky top-0 z-50 glass border-b border-border w-full overflow-hidden">
+      <div className="w-full px-3 sm:px-4 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between h-14 sm:h-16 gap-2 min-w-0">
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <motion.div 
               className="overflow-hidden"
