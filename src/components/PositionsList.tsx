@@ -77,10 +77,10 @@ export function PositionsList({ positions, onSell, onViewChart }: PositionsListP
                     <p className="text-sm text-muted-foreground">{position.name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">${value.toFixed(2)}</p>
+                    <p className="font-semibold">${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     <div className={`flex items-center justify-end gap-1 text-sm ${isPositive ? 'text-profit' : 'text-loss'}`}>
                       {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                      <span>{isPositive ? '+' : ''}${pnl.toFixed(2)} ({pnlPercent.toFixed(2)}%)</span>
+                      <span>{isPositive ? '+' : ''}${pnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({pnlPercent.toFixed(2)}%)</span>
                     </div>
                   </div>
                 </div>
