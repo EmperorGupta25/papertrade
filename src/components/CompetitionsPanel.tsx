@@ -63,6 +63,11 @@ interface CompetitionsPanelProps {
   onOpenAuth: () => void;
 }
 
+interface UserProfile {
+  user_id: string;
+  display_name: string;
+}
+
 export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
   const { user, isAuthenticated } = useAuth();
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -70,10 +75,11 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [pendingInvites, setPendingInvites] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeSection, setActiveSection] = useState<'active' | 'invites' | 'friends'>('active');
+  const [activeSection, setActiveSection] = useState<'active' | 'invites' | 'friends' | 'users'>('active');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showAddFriendDialog, setShowAddFriendDialog] = useState(false);
-  const [friendSearch, setFriendSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [sentRequests, setSentRequests] = useState<string[]>([]); // user_ids we've sent requests to
   
   // Create competition form
   const [competitionName, setCompetitionName] = useState('');
@@ -202,13 +208,6 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    loadFriends();
-    loadPendingFriendRequests();
-    loadCompetitions();
-  }, [isAuthenticated, loadCompetitions, loadFriends, loadPendingFriendRequests]);
-
   // If a user has incoming friend requests, don't hide them behind the default "Active" tab.
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -266,35 +265,50 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
     }
   };
 
-  // (loadCompetitions moved to useCallback above)
-
-  const sendFriendRequest = async () => {
-    if (!user || !friendSearch.trim()) return;
+  // Load all users for the Users tab
+  const loadAllUsers = useCallback(async () => {
+    if (!user) return;
 
     try {
-      // Find user by display name
-      const { data: profiles, error: searchError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('user_id, display_name')
-        .ilike('display_name', friendSearch.trim());
+        .neq('user_id', user.id)
+        .order('display_name');
 
-      if (searchError) throw searchError;
-      if (!profiles || profiles.length === 0) {
-        toast.error('User not found');
-        return;
-      }
+      if (error) throw error;
+      setAllUsers((data || []) as UserProfile[]);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  }, [user]);
 
-      const friendProfile = profiles[0];
-      if (friendProfile.user_id === user.id) {
-        toast.error("You can't add yourself as a friend");
-        return;
-      }
+  // Load sent friend requests to know who we've already sent requests to
+  const loadSentRequests = useCallback(async () => {
+    if (!user) return;
 
+    try {
+      const { data, error } = await supabase
+        .from('friends')
+        .select('friend_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setSentRequests((data || []).map(r => r.friend_id));
+    } catch (error) {
+      console.error('Error loading sent requests:', error);
+    }
+  }, [user]);
+
+  const sendFriendRequestToUser = async (targetUserId: string, targetDisplayName: string) => {
+    if (!user) return;
+
+    try {
       const { error } = await supabase
         .from('friends')
         .insert({
           user_id: user.id,
-          friend_id: friendProfile.user_id,
+          friend_id: targetUserId,
           status: 'pending'
         });
 
@@ -307,14 +321,24 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
         return;
       }
 
-      toast.success(`Friend request sent to ${friendProfile.display_name}`);
-      setFriendSearch('');
-      setShowAddFriendDialog(false);
+      toast.success(`Friend request sent to ${targetDisplayName}`);
+      setSentRequests(prev => [...prev, targetUserId]);
+      loadFriends();
     } catch (error) {
       console.error('Error sending friend request:', error);
       toast.error('Failed to send friend request');
     }
   };
+
+  // Load all data when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    loadFriends();
+    loadPendingFriendRequests();
+    loadCompetitions();
+    loadAllUsers();
+    loadSentRequests();
+  }, [isAuthenticated, loadCompetitions, loadFriends, loadPendingFriendRequests, loadAllUsers, loadSentRequests]);
 
   const createCompetition = async () => {
     if (!user || !competitionName.trim() || selectedFriends.length === 0) {
@@ -477,35 +501,6 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
           Competitions
         </h1>
         <div className="flex gap-2">
-          <Dialog open={showAddFriendDialog} onOpenChange={setShowAddFriendDialog}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add Friend
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-card">
-              <DialogHeader>
-                <DialogTitle>Add Friend</DialogTitle>
-                <DialogDescription>
-                  Search for a user by their display name to send a friend request.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter username..."
-                    value={friendSearch}
-                    onChange={(e) => setFriendSearch(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button onClick={sendFriendRequest}>
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
 
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
@@ -625,7 +620,7 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
       </div>
 
       <Tabs value={activeSection} onValueChange={(v) => setActiveSection(v as any)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="active">Active</TabsTrigger>
           <TabsTrigger value="invites">
             Invites
@@ -642,6 +637,10 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
                 {pendingFriendRequests.length}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="users">
+            <UserPlus className="h-4 w-4 mr-1" />
+            Users
           </TabsTrigger>
         </TabsList>
 
@@ -777,6 +776,94 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
               </div>
             </div>
           )}
+        </TabsContent>
+
+        {/* Users Tab - Browse and add friends */}
+        <TabsContent value="users" className="space-y-4 mt-4">
+          {/* Search input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search users..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Users list */}
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {allUsers.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>No other users yet</p>
+                  <p className="text-sm">Be the first to invite your friends!</p>
+                </CardContent>
+              </Card>
+            ) : (
+              allUsers
+                .filter(u => 
+                  userSearch.trim() === '' || 
+                  u.display_name?.toLowerCase().includes(userSearch.toLowerCase())
+                )
+                .map((userProfile) => {
+                  // Check if already friends
+                  const isFriend = friends.some(f => 
+                    f.user_id === userProfile.user_id || f.friend_id === userProfile.user_id
+                  );
+                  // Check if request already sent
+                  const requestSent = sentRequests.includes(userProfile.user_id);
+                  // Check if they sent us a request
+                  const incomingRequest = pendingFriendRequests.some(r => r.user_id === userProfile.user_id);
+
+                  return (
+                    <Card key={userProfile.user_id} className="hover:bg-secondary/50 transition-colors">
+                      <CardContent className="py-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center">
+                            <Users className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <span className="font-medium">{userProfile.display_name || 'Unknown User'}</span>
+                        </div>
+                        {isFriend ? (
+                          <Badge variant="secondary">Friend</Badge>
+                        ) : incomingRequest ? (
+                          <Badge variant="outline" className="text-warning border-warning">
+                            Pending
+                          </Badge>
+                        ) : requestSent ? (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Request Sent
+                          </Badge>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => sendFriendRequestToUser(userProfile.user_id, userProfile.display_name || 'User')}
+                          >
+                            <UserPlus className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })
+            )}
+            {allUsers.length > 0 && 
+              allUsers.filter(u => 
+                userSearch.trim() === '' || 
+                u.display_name?.toLowerCase().includes(userSearch.toLowerCase())
+              ).length === 0 && (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No users found matching "{userSearch}"</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>
