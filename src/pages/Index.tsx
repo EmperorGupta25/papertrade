@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/Header';
+import { MobileNav } from '@/components/MobileNav';
 import { PortfolioCard } from '@/components/PortfolioCard';
 import { PositionsList } from '@/components/PositionsList';
 import { StockList } from '@/components/StockList';
@@ -18,12 +19,14 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { TradeHistoryModal } from '@/components/TradeHistoryModal';
 import { CompetitionsPanel } from '@/components/CompetitionsPanel';
 import { usePortfolio } from '@/hooks/usePortfolio';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Stock, allStocks } from '@/lib/stockData';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart3, TrendingUp, Bot, LineChart, Settings, Trophy } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 const Index = () => {
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('portfolio');
   const [selectedStock, setSelectedStock] = useState<Stock | null>(allStocks[0]);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -146,18 +149,8 @@ const Index = () => {
     });
   };
 
-  // Mobile navigation
-  const mobileNavItems = [
-    { id: 'portfolio', label: 'Portfolio', icon: BarChart3 },
-    { id: 'trade', label: 'Trade', icon: TrendingUp },
-    { id: 'charts', label: 'Charts', icon: LineChart },
-    { id: 'competitions', label: 'Compete', icon: Trophy },
-    { id: 'coach', label: 'Coach', icon: Bot },
-    { id: 'settings', label: 'Settings', icon: Settings },
-  ];
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Header 
         balance={balance} 
         activeTab={activeTab} 
@@ -472,28 +465,6 @@ const Index = () => {
         </motion.div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-card border-t border-border z-50">
-        <div className="flex justify-around py-2">
-          {mobileNavItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-colors ${
-                activeTab === item.id
-                  ? 'text-primary'
-                  : 'text-muted-foreground'
-              }`}
-            >
-              <item.icon className="h-5 w-5" />
-              <span className="text-[10px]">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      {/* Spacer for mobile nav */}
-      <div className="h-20 lg:hidden" />
 
       <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
       
@@ -519,6 +490,8 @@ const Index = () => {
         onConfirm={confirmDialog.onConfirm}
         variant={confirmDialog.variant}
       />
+      
+      <MobileNav activeTab={activeTab} setActiveTab={setActiveTab} />
     </div>
   );
 };
