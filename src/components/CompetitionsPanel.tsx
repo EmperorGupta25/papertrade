@@ -70,6 +70,7 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [pendingInvites, setPendingInvites] = useState<Competition[]>([]);
   const [loading, setLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState<'active' | 'invites' | 'friends'>('active');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAddFriendDialog, setShowAddFriendDialog] = useState(false);
   const [friendSearch, setFriendSearch] = useState('');
@@ -207,6 +208,12 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
     loadPendingFriendRequests();
     loadCompetitions();
   }, [isAuthenticated, loadCompetitions, loadFriends, loadPendingFriendRequests]);
+
+  // If a user has incoming friend requests, don't hide them behind the default "Active" tab.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (pendingFriendRequests.length > 0) setActiveSection('friends');
+  }, [isAuthenticated, pendingFriendRequests.length]);
 
   // Keep pending friend requests fresh so recipients see invites without a full reload.
   useEffect(() => {
@@ -617,7 +624,7 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
         </div>
       </div>
 
-      <Tabs defaultValue="active" className="w-full">
+      <Tabs value={activeSection} onValueChange={(v) => setActiveSection(v as any)} className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="active">Active</TabsTrigger>
           <TabsTrigger value="invites">
