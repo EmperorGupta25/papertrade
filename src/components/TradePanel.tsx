@@ -13,7 +13,7 @@ import { useStockPrice } from '@/hooks/useStockPrices';
 interface TradePanelProps {
   stock: Stock | null;
   balance: number;
-  onBuy: (symbol: string, shares: number, stopLoss?: number, takeProfit?: number) => boolean;
+  onBuy: (symbol: string, shares: number, stopLoss?: number, takeProfit?: number, livePrice?: number) => boolean;
   onSell: (symbol: string, shares: number) => boolean;
   ownedShares: number;
 }
@@ -61,7 +61,8 @@ export function TradePanel({ stock, balance, onBuy, onSell, ownedShares }: Trade
         stock.symbol,
         shareCount,
         enableStopLoss ? parseFloat(stopLoss) : undefined,
-        enableTakeProfit ? parseFloat(takeProfit) : undefined
+        enableTakeProfit ? parseFloat(takeProfit) : undefined,
+        livePrice
       );
       if (success) {
         toast.success(`Bought ${shareCount} shares of ${stock.symbol}`, {
