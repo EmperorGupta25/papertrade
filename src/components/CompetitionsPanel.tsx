@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Trophy, 
@@ -80,17 +80,9 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
   const [duration, setDuration] = useState('1_week');
   const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadFriends();
-      loadPendingFriendRequests();
-      loadCompetitions();
-    }
-  }, [isAuthenticated]);
-
-  const loadFriends = async () => {
+  const loadFriends = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('friends')
@@ -99,7 +91,7 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
         .eq('status', 'accepted');
 
       if (error) throw error;
-      
+
       // Fetch display names for friends
       const friendsWithNames = await Promise.all((data || []).map(async (f) => {
         const friendUserId = f.user_id === user.id ? f.friend_id : f.user_id;
@@ -108,11 +100,11 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
           .select('display_name')
           .eq('user_id', friendUserId)
           .single();
-        
-        return { 
-          ...f, 
+
+        return {
+          ...f,
           display_name: profile?.display_name || 'Unknown',
-          status: f.status as 'pending' | 'accepted' | 'rejected'
+          status: f.status as 'pending' | 'accepted' | 'rejected',
         };
       }));
 
@@ -120,11 +112,11 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
     } catch (error) {
       console.error('Error loading friends:', error);
     }
-  };
+  }, [user]);
 
-  const loadPendingFriendRequests = async () => {
+  const loadPendingFriendRequests = useCallback(async () => {
     if (!user) return;
-    
+
     try {
       // Get pending requests where current user is the recipient (friend_id)
       const { data, error } = await supabase
@@ -134,7 +126,7 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
         .eq('status', 'pending');
 
       if (error) throw error;
-      
+
       // Fetch display names for the requesters
       const requestsWithNames = await Promise.all((data || []).map(async (f) => {
         const { data: profile } = await supabase
@@ -142,11 +134,11 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
           .select('display_name')
           .eq('user_id', f.user_id)
           .single();
-        
-        return { 
-          ...f, 
+
+        return {
+          ...f,
           display_name: profile?.display_name || 'Unknown',
-          status: f.status as 'pending' | 'accepted' | 'rejected'
+          status: f.status as 'pending' | 'accepted' | 'rejected',
         };
       }));
 
@@ -154,7 +146,74 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
     } catch (error) {
       console.error('Error loading pending friend requests:', error);
     }
-  };
+  }, [user]);
+
+  const loadCompetitions = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+
+    try {
+      const { data: comps, error } = await supabase
+        .from('competitions')
+        .select(`
+          *,
+          competition_participants (*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const userComps = (comps || []).map((c: any) => ({
+        ...c,
+        participants: c.competition_participants,
+      }));
+
+      // Separate active competitions from invites
+      const active = userComps.filter((c: Competition) =>
+        c.participants?.some((p: Participant) => p.user_id === user.id && p.status === 'accepted') ||
+        c.creator_id === user.id
+      );
+
+      const invites = userComps.filter((c: Competition) =>
+        c.participants?.some((p: Participant) => p.user_id === user.id && p.status === 'invited')
+      );
+
+      setCompetitions(active);
+      setPendingInvites(invites);
+    } catch (error) {
+      console.error('Error loading competitions:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    loadFriends();
+    loadPendingFriendRequests();
+    loadCompetitions();
+  }, [isAuthenticated, loadCompetitions, loadFriends, loadPendingFriendRequests]);
+
+  // Keep pending friend requests fresh so recipients see invites without a full reload.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Poll lightly (covers cases where realtime isn't configured)
+    const interval = window.setInterval(() => {
+      loadPendingFriendRequests();
+    }, 8000);
+
+    // Also refresh when the tab regains focus
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadPendingFriendRequests();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [isAuthenticated, loadPendingFriendRequests]);
 
   const respondToFriendRequest = async (friendshipId: string, accept: boolean) => {
     if (!user) return;
@@ -186,44 +245,7 @@ export function CompetitionsPanel({ onOpenAuth }: CompetitionsPanelProps) {
     }
   };
 
-  const loadCompetitions = async () => {
-    if (!user) return;
-    setLoading(true);
-    
-    try {
-      const { data: comps, error } = await supabase
-        .from('competitions')
-        .select(`
-          *,
-          competition_participants (*)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const userComps = (comps || []).map((c: any) => ({
-        ...c,
-        participants: c.competition_participants
-      }));
-
-      // Separate active competitions from invites
-      const active = userComps.filter((c: Competition) => 
-        c.participants?.some((p: Participant) => p.user_id === user.id && p.status === 'accepted') ||
-        c.creator_id === user.id
-      );
-      
-      const invites = userComps.filter((c: Competition) =>
-        c.participants?.some((p: Participant) => p.user_id === user.id && p.status === 'invited')
-      );
-
-      setCompetitions(active);
-      setPendingInvites(invites);
-    } catch (error) {
-      console.error('Error loading competitions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // (loadCompetitions moved to useCallback above)
 
   const sendFriendRequest = async () => {
     if (!user || !friendSearch.trim()) return;
