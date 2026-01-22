@@ -128,11 +128,11 @@ export function Header({ balance, activeTab, setActiveTab, onOpenAuth }: HeaderP
             <MarketStatusBanner />
             <button 
               onClick={() => window.dispatchEvent(new CustomEvent('openTradeHistory'))}
-              className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-secondary rounded-lg hover:bg-secondary/80 transition-colors cursor-pointer"
             >
               <Wallet className="h-4 w-4 text-primary" />
-              <span className="font-semibold text-sm">
-                ${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              <span className="font-semibold text-xs sm:text-sm">
+                ${balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 0 })}
               </span>
             </button>
             
